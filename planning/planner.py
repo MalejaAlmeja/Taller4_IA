@@ -137,10 +137,47 @@ def forwardBFS(problem: Problem) -> list[Action]:
          to get (next_state, action, cost) triples. Track visited states to
          avoid revisiting the same state twice (graph search, not tree search).
     """
-    ### Your code here ###
+    start = problem.getStartState()
 
-    ### End of your code ###
+    #Caso base: Si el estado inicial es el objetivo se retorna. 
+    if problem.isGoalState(start):
+        return []
 
+    #Se crea una cola para almacenar los estados en la frontera.
+    frontier = Queue()
+    frontier.push((start, []))
+    visited = {start}
+
+    #Mientras no este vacia la frontera se itera
+    while not frontier.isEmpty():
+        state, actions = frontier.pop()
+        #Se van sacando los estados y sus acciones, si algun estado ya ha sido visitado se omite.
+        for next_state, action, _ in problem.getSuccessors(state):
+            if next_state in visited:
+                continue
+            #Se van agregando las acciones y cuando se llega al objetivo se retorna
+            new_actions = actions + [action]
+
+            if problem.isGoalState(next_state):
+                return new_actions
+            #Se marcan los visitados y se meten a la cola para procesar posteriormente sus sucesores
+            visited.add(next_state)
+            frontier.push((next_state, new_actions))
+
+    return []
+    
+"""
+Se ejecutaron todos los layouts y en todos se encontro un plan exitoso (Exceptuando narrowRescue que tenía un problema en la forma en la que se creo el mapa por lo que se adapto agregando espacios para complementar)
+
+Frente al analisis del comportamiento de BFS en términos de número de estados explorados y longitud del plan: 
+
+Al comparar los layouts tinyBase (5x7) y warehouseRescue (15x12) se puede observar claramente cómo escala el algoritmo. 
+En tinyBase, BFS encontró un plan óptimo de 9 acciones explorando apenas 225 estados en 0.011 segundos, mientras que en warehouseRescue el plan creció a 31 acciones pero los estados explorados se dispararon a 9716 estados en 15.150 segundos. 
+Este crecimiento es desproporcional: el mapa es aproximadamente 5 veces más grande en área, pero BFS exploró 43 veces más estados. 
+Esto ocurre porque el estado no es simplemente la posición del robot en el mapa, sino un frozenset completo de fluentes que combina la posición del robot, la ubicación de cada objeto, si el robot tiene algo en la mano y si los suministros están listos, generando un espacio de búsqueda mucho más grande. 
+A pesar de esto, BFS demostró ser completo y óptimo en ambos casos, encontrando siempre el plan de menor número de acciones posible, aunque a un costo de complejidad que escala muy mal con el tamaño del problema.
+
+"""
 
 # ---------------------------------------------------------------------------
 # Punto 3 – Backward Planning
