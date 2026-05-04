@@ -200,9 +200,17 @@ def regress(goal_set: State, action: Action) -> State | None:
     Tip: Use frozenset operations: intersection (&), difference (-), union (|).
          Check relevance first, then check for contradictions, then compute.
     """
-    ### Your code here ###
-
-    ### End of your code ###
+    
+    # no sé si esto esté bien, es una idea por ahora idk -maleja
+    new_goal_set = []
+    
+    for fluent in goal_set:
+        if fluent in action.add_list:
+            new_goal_set.append(fluent)
+    
+    frozenset_goal = frozenset(new_goal_set)
+    return frozenset_goal
+    
 
 
 def backwardSearch(problem: Problem) -> list[Action]:
@@ -223,9 +231,24 @@ def backwardSearch(problem: Problem) -> list[Action]:
          Skip subgoals that contain static predicates (MedicalPost, Adjacent,
          Pickable) that are false in the initial state — these are dead ends.
     """
-    ### Your code here ###
-
-    ### End of your code ###
+    
+    #primer borrador, tengo que probar y mejorar - maleja
+    
+    actions = []
+    
+    goal_set = problem.goal
+    while not problem.isGoalState(goal_set):
+        for action in problem.domain:
+            if action.add_list & goal_set:
+                new_goal_set = regress(goal_set, action)
+                if new_goal_set is not None and not any(fluent in problem.initial_state for fluent in new_goal_set if fluent[0] in ("MedicalPost", "Adjacent", "Pickable")):
+                    goal_set = new_goal_set
+                    actions.append(action)
+                    break
+        else:
+            return []  
+    return actions
+    
 
 
 # ---------------------------------------------------------------------------
