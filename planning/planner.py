@@ -275,9 +275,40 @@ def aStarPlanner(
          Use PriorityQueue with priority = g + h(next_state).
          Track the best g-cost seen for each state to avoid stale expansions.
     """
-    ### Your code here ###
+    estado_inicial = problem.initial_state
+    objetivo = problem.goal
 
-    ### End of your code ###
+    h_inicial = heuristic(estado_inicial, objetivo, problem.domain, problem.objects)
+
+    frontera = PriorityQueue()
+    frontera.push((estado_inicial, []), h_inicial)
+
+    mejor_g = {estado_inicial: 0}
+
+    while not frontera.isEmpty():
+        (estado_actual, plan_actual), _ = frontera.pop()
+
+        g_actual = len(plan_actual) 
+
+        if g_actual > mejor_g.get(estado_actual, float('inf')):
+            continue
+
+        if problem.isGoal(estado_actual):
+            return plan_actual
+
+       
+        for accion in get_applicable_actions(estado_actual, problem.domain, problem.objects):
+            estado_siguiente = apply_action(estado_actual, accion)
+            g_siguiente = g_actual + 1  
+
+            
+            if g_siguiente < mejor_g.get(estado_siguiente, float('inf')):
+                mejor_g[estado_siguiente] = g_siguiente
+                h_siguiente = heuristic(estado_siguiente, objetivo, problem.domain, problem.objects)
+                f_siguiente = g_siguiente + h_siguiente
+                frontera.push((estado_siguiente, plan_actual + [accion]), f_siguiente)
+
+    return []
 
 
 # Aliases used by the command-line argument parser

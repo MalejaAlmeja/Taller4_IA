@@ -44,9 +44,37 @@ def ignorePreconditionsHeuristic(
          with the initial state, or generate all groundings regardless of state).
          Remember: with no preconditions, every grounding is "applicable".
     """
-    ### Your code here ###
 
-    ### End of your code ###
+    fluentes_faltantes = goal.fluents - state.fluents
+
+    if not fluentes_faltantes:
+        return 0
+
+    todos_los_fluentes = state.fluents | goal.fluents
+    estado_falso = State(todos_los_fluentes)
+
+    acciones_disponibles = get_applicable_actions(estado_falso, domain, objects)
+
+    listas_de_efectos = [frozenset(accion.add_list) for accion in acciones_disponibles]
+
+    conteo = 0
+    por_cubrir = frozenset(fluentes_faltantes)
+
+    while por_cubrir:
+        mejor_cobertura = frozenset()
+
+        for efectos in listas_de_efectos:
+            cobertura = efectos & por_cubrir 
+            if len(cobertura) > len(mejor_cobertura):
+                mejor_cobertura = cobertura
+
+        if not mejor_cobertura:
+            return float('inf')
+
+        por_cubrir -= mejor_cobertura
+        conteo += 1
+
+    return conteo
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +106,36 @@ def ignoreDeleteListsHeuristic(
          Use get_applicable_actions to enumerate applicable grounded actions at
          each step (preconditions still apply in the relaxed model).
     """
-    ### Your code here ###
+    fluentes_actuales = set(state.fluents)
+    fluentes_objetivo = goal.fluents
+    pasos = 0
+    limite = 1000  
 
-    ### End of your code ###
+    for _ in range(limite):
+        fluentes_faltantes = fluentes_objetivo - fluentes_actuales
+
+        if not fluentes_faltantes:
+            return pasos
+
+        estado_actual = State(frozenset(fluentes_actuales))
+        acciones_aplicables = get_applicable_actions(estado_actual, domain, objects)
+
+        if not acciones_aplicables:
+            return float('inf')  
+        
+        mejor_accion = None
+        mejor_ganancia = 0
+
+        for accion in acciones_aplicables:
+            ganancia = len(frozenset(accion.add_list) & fluentes_faltantes)
+            if ganancia > mejor_ganancia:
+                mejor_ganancia = ganancia
+                mejor_accion = accion
+
+        if mejor_accion is None or mejor_ganancia == 0:
+            return float('inf')
+
+        fluentes_actuales |= set(mejor_accion.add_list)
+        pasos += 1
+
+    return float('inf') 
