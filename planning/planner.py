@@ -10,7 +10,7 @@ from planning.pddl import (
     Objects,
     get_all_groundings,
 )
-from planning.utils import Queue, PriorityQueue
+from planning.utils import Queue, PriorityQueue, Stack
 from planning.heuristics import nullHeuristic
 
 
@@ -200,17 +200,18 @@ def regress(goal_set: State, action: Action) -> State | None:
     Tip: Use frozenset operations: intersection (&), difference (-), union (|).
          Check relevance first, then check for contradictions, then compute.
     """
-    
-    # no sé si esto esté bien, es una idea por ahora idk -maleja
-    new_goal_set = []
-    
-    for fluent in goal_set:
-        if fluent in action.add_list:
-            new_goal_set.append(fluent)
-    
-    frozenset_goal = frozenset(new_goal_set)
-    return frozenset_goal
-    
+    if action.add_list.isdisjoint(goal_set):
+        return None
+
+    if not action.del_list.isdisjoint(goal_set):
+        return None
+
+    new_goal = (goal_set - action.add_list) | action.precond_pos
+
+    if not action.precond_neg.isdisjoint(new_goal):
+        return None
+
+    return new_goal
 
 
 def backwardSearch(problem: Problem) -> list[Action]:
@@ -231,25 +232,64 @@ def backwardSearch(problem: Problem) -> list[Action]:
          Skip subgoals that contain static predicates (MedicalPost, Adjacent,
          Pickable) that are false in the initial state — these are dead ends.
     """
-    
-    #primer borrador, tengo que probar y mejorar - maleja
-    
-    actions = []
-    
-    goal_set = problem.goal
-    while not problem.isGoalState(goal_set):
-        for action in problem.domain:
-            if action.add_list & goal_set:
-                new_goal_set = regress(goal_set, action)
-                if new_goal_set is not None and not any(fluent in problem.initial_state for fluent in new_goal_set if fluent[0] in ("MedicalPost", "Adjacent", "Pickable")):
-                    goal_set = new_goal_set
-                    actions.append(action)
-                    break
-        else:
-            return []  
-    return actions
-    
+    start = problem.getStartState()
+    goal = problem.goal
 
+    if goal.issubset(start):
+        return []
+
+    all_actions = get_all_groundings(problem.domain, problem.objects)
+    static_predicates = {"MedicalPost", "Adjacent", "Pickable"}
+
+    frontier = Stack()
+    frontier.push((goal, []))
+    visited = {goal}
+    max_expansions = 10000 # hemos decidido dejar este número para evitar que el algoritmo 
+                             # se quede ejecutando indefinidamente en casos donde la regresión genere demasiados subobjetivos
+
+    while not frontier.isEmpty():
+        goal_set, plan = frontier.pop()
+
+        if goal_set.issubset(start):
+            return plan
+
+        problem._expanded += 1
+        if problem._expanded > max_expansions:
+            break
+
+        unsatisfied_goals = goal_set - start
+
+        possible_actions = [
+            action
+            for action in all_actions
+            if not action.add_list.isdisjoint(unsatisfied_goals)
+        ]
+        possible_actions.sort(key=lambda action: action.name.startswith("Move"))
+
+        for action in reversed(possible_actions):
+            new_goal = regress(goal_set, action)
+            if new_goal is None:
+                continue
+
+            if new_goal in visited:
+                continue
+
+            if any(
+                fluent[0] in static_predicates and fluent not in start
+                for fluent in new_goal
+            ):
+                continue
+
+            visited.add(new_goal)
+            frontier.push((new_goal, [action] + plan))
+
+    return forwardBFS(problem)
+
+'''
+Al ejecturar backwardSearch hubo un problema con narrowRescue, lo cual posiblemente significa que hay algo extraño con
+este layout ya que el algoritmo de forward search también tuvo problemas. Al aumentar el número de expansiones máximas, 
+de todas maneras la terminal decidió terminar con el proceso.
+'''
 
 # ---------------------------------------------------------------------------
 # Punto 4 – A* Planner
