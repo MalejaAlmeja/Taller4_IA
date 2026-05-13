@@ -9,6 +9,8 @@ from planning.pddl import (
     State,
     Objects,
     get_all_groundings,
+    get_applicable_actions,
+    apply_action
 )
 from planning.utils import Queue, PriorityQueue, Stack
 from planning.heuristics import nullHeuristic
@@ -326,14 +328,14 @@ def aStarPlanner(
     mejor_g = {estado_inicial: 0}
 
     while not frontera.isEmpty():
-        (estado_actual, plan_actual), _ = frontera.pop()
+        estado_actual, plan_actual = frontera.pop()
 
         g_actual = len(plan_actual) 
 
         if g_actual > mejor_g.get(estado_actual, float('inf')):
             continue
 
-        if problem.isGoal(estado_actual):
+        if problem.isGoalState(estado_actual):
             return plan_actual
 
        

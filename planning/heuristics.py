@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from planning.pddl import ActionSchema, State, Objects
+from planning.pddl import ActionSchema, State, Objects, get_applicable_actions, apply_action
 
 
 def nullHeuristic(
@@ -45,12 +45,15 @@ def ignorePreconditionsHeuristic(
          Remember: with no preconditions, every grounding is "applicable".
     """
 
-    fluentes_faltantes = goal.fluents - state.fluents
+    fluentes_estado = state.fluents if hasattr(state, 'fluents') else state
+    fluentes_objetivo = goal.fluents if hasattr(goal, 'fluents') else goal
+
+    fluentes_faltantes = fluentes_objetivo - fluentes_estado
 
     if not fluentes_faltantes:
         return 0
 
-    todos_los_fluentes = state.fluents | goal.fluents
+    todos_los_fluentes = fluentes_estado | fluentes_objetivo
     estado_falso = State(todos_los_fluentes)
 
     acciones_disponibles = get_applicable_actions(estado_falso, domain, objects)
@@ -106,8 +109,10 @@ def ignoreDeleteListsHeuristic(
          Use get_applicable_actions to enumerate applicable grounded actions at
          each step (preconditions still apply in the relaxed model).
     """
-    fluentes_actuales = set(state.fluents)
-    fluentes_objetivo = goal.fluents
+    fluentes_estado = state.fluents if hasattr(state, 'fluents') else state
+    fluentes_objetivo = goal.fluents if hasattr(goal, 'fluents') else goal
+
+    fluentes_actuales = set(fluentes_estado)
     pasos = 0
     limite = 1000  
 
