@@ -305,20 +305,12 @@ def aStarPlanner(
     problem: Problem,
     heuristic: Heuristic = nullHeuristic,
 ) -> list[Action]:
-    """
-    Forward A* search guided by a heuristic.
 
-    Combines the real accumulated cost g(n) with the heuristic estimate h(n)
-    to prioritize which state to expand next: f(n) = g(n) + h(n).
-
-    Returns a list of Action objects forming a valid plan, or [] if no plan exists.
-
-    Tip: The heuristic signature is heuristic(state, goal, domain, objects) → float.
-         Use PriorityQueue with priority = g + h(next_state).
-         Track the best g-cost seen for each state to avoid stale expansions.
-    """
-    estado_inicial = problem.initial_state
+    estado_inicial = problem.getStartState()
     objetivo = problem.goal
+
+    if problem.isGoalState(estado_inicial):
+        return []
 
     h_inicial = heuristic(estado_inicial, objetivo, problem.domain, problem.objects)
 
@@ -330,20 +322,19 @@ def aStarPlanner(
     while not frontera.isEmpty():
         estado_actual, plan_actual = frontera.pop()
 
-        g_actual = len(plan_actual) 
+        g_actual = len(plan_actual)
 
+        # Si ya encontramos un camino más corto a este estado, lo ignoramos
         if g_actual > mejor_g.get(estado_actual, float('inf')):
             continue
 
         if problem.isGoalState(estado_actual):
             return plan_actual
 
-       
-        for accion in get_applicable_actions(estado_actual, problem.domain, problem.objects):
-            estado_siguiente = apply_action(estado_actual, accion)
-            g_siguiente = g_actual + 1  
+        # Usamos getSuccessors igual que forwardBFS
+        for estado_siguiente, accion, _ in problem.getSuccessors(estado_actual):
+            g_siguiente = g_actual + 1
 
-            
             if g_siguiente < mejor_g.get(estado_siguiente, float('inf')):
                 mejor_g[estado_siguiente] = g_siguiente
                 h_siguiente = heuristic(estado_siguiente, objetivo, problem.domain, problem.objects)
